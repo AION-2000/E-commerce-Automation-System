@@ -1,242 +1,135 @@
-E-commerce Automation System - README
-Project Name: Ecommerce_automation
-Submitted by: Shihab Shahriar Aion
-Date: October 15, 2025
+# E-commerce Automation System
 
-📋 Project Overview
-This project implements an end-to-end automation system for processing customer orders from emails and managing product data. The system is built using n8n and consists of two main workflows that work together to streamline order management.
-What This Automation Does:
+> End-to-end n8n automation for e-commerce order processing with AI-powered email parsing, product lookup, and Monday.com integration
 
-Automatically fetches product data from an API and stores it in Google Sheets
-Monitors incoming emails for customer orders
-Uses AI to extract and structure order information
-Looks up product details from the stored data
-Creates organized tasks in Monday.com with complete order information
+n8n:
+<img width="1024" height="273" alt="image" src="https://github.com/user-attachments/assets/16c3cc31-5326-498e-924e-084d78226e14" />
 
+<img width="1438" height="314" alt="image" src="https://github.com/user-attachments/assets/235c0287-542b-4968-b4c1-3ec5e75cecd7" />
 
-🏗️ Architecture
-The project is divided into two interconnected workflows:
-1. Product Data Pipeline
-This workflow handles the collection and storage of product information.
-2. Email to Monday.com Task
-This workflow processes incoming customer emails and creates actionable tasks.
 
-📊 Workflow 1: Product Data Pipeline
-Purpose
-This workflow fetches product data from a paginated API and stores it in Google Sheets for later reference.
-How It Works
-Step 1: Manual Trigger
+Sheets:
+<img width="484" height="887" alt="image" src="https://github.com/user-attachments/assets/0a07f119-3769-4121-97b0-5d2a50367420" />
 
-The workflow starts when I manually execute it
-This gives me control over when to refresh the product database
+Monday.com:
+<img width="1900" height="558" alt="image" src="https://github.com/user-attachments/assets/0324a9c1-3a9c-418f-85ca-bc77692b1de5" />
 
-Step 2: HTTP Request
 
-Connects to the DummyJSON products API (https://dummyjson.com/products)
-Fetches the initial product data
-The API returns products in a paginated format
+## 📋 Overview
 
-Step 3: Data Transformation (JavaScript Code)
+This project implements an automated system for processing customer orders from emails and managing product data. Built with n8n, it streamlines order management by automatically fetching product data, parsing customer emails with AI, and creating organized tasks in Monday.com.
 
-Extracts the products array from the API response
-Transforms each product into a clean format with four fields:
+### Key Features
 
-ID: Product identifier (number)
-Name: Product title
-Price: Product price
-Category: Product category
+- 🔄 **Automated Product Data Collection** - Fetches and stores product information from API
+- 🤖 **AI-Powered Email Processing** - Uses OpenAI to extract order details from emails
+- 🔍 **Smart Product Lookup** - Cross-references product IDs with stored data
+- ✅ **Auto Task Creation** - Creates detailed Monday.com tasks with complete order info
 
+## 🏗️ Architecture
 
-Returns an array of formatted product objects
+The system consists of two interconnected n8n workflows:
 
-Step 4: Google Sheets Storage
+1. **Product Data Pipeline** - Collects product data from API and stores in Google Sheets
+2. **Email to Monday.com Task** - Processes customer emails and creates actionable tasks
 
-Appends all products to a Google Sheet titled "Product Data"
-Maps the data to columns: ID, Name, Price, Category
-Creates a persistent database that can be queried later
+```
+┌─────────────┐     ┌──────────────┐     ┌───────────────┐
+│   API       │────▶│ Google Sheets│◀────│  Email Inbox  │
+│  (Products) │     │  (Database)  │     │  (Customer)   │
+└─────────────┘     └──────────────┘     └───────────────┘
+                           │                      │
+                           │                      ▼
+                           │              ┌──────────────┐
+                           │              │  AI Extract  │
+                           │              │   (OpenAI)   │
+                           │              └──────────────┘
+                           │                      │
+                           └──────────┬───────────┘
+                                      ▼
+                              ┌──────────────┐
+                              │  Monday.com  │
+                              │    (Tasks)   │
+                              └──────────────┘
+```
 
-Pagination Implementation
-Current Limitation:
-The current implementation only fetches the first page of products from the API. I discovered during testing that the DummyJSON API returns all products in a single response with pagination metadata, but my workflow doesn't loop through multiple pages yet.
-Why This Matters:
-The assignment specifically mentioned handling pagination completely before processing. In a real-world scenario with hundreds or thousands of products across multiple pages, I would need to:
+## 🚀 Getting Started
 
-Check the total and limit fields in the API response
-Calculate how many pages exist
-Loop through all pages using the skip parameter
-Collect all products before storing them
+### Prerequisites
 
-What I Learned:
-For future improvements, I would add a loop node that continues fetching until all pages are retrieved, then batch process all products at once instead of page-by-page.
+- n8n instance (self-hosted or cloud)
+- Google Cloud account (for Sheets API)
+- OpenAI API key
+- Monday.com account with API access
+- Gmail account with IMAP enabled
 
-📧 Workflow 2: Email to Monday.com Task
-Purpose
-This workflow monitors incoming emails, extracts order information using AI, looks up product details, and creates tasks in Monday.com.
-How It Works
-Step 1: Email Trigger (IMAP)
+### Installation
 
-Continuously monitors my Gmail inbox for new emails
-Triggers automatically when a new email arrives
-Configured with IMAP credentials to access Gmail securely
+1. **Clone this repository**
+   ```bash
+   git clone (https://github.com/AION-2000/E-commerce-Automation-System)
+   cd E-commerce-Automation-System
+   ```
 
-Step 2: Email Data Extraction (JavaScript Code)
+2. **Import workflows into n8n**
+   - Open your n8n instance
+   - Go to Workflows → Import from File
+   - Import `Product Data Pipeline.json`
+   - Import `Email to Monday.com Task.json`
 
-Extracts key email components:
+3. **Configure credentials**
+   - Google Sheets OAuth2
+   - OpenAI API key
+   - Monday.com API token
+   - Gmail IMAP credentials
 
-Subject line
-Email body (prioritizes plain text over HTML)
-Sender information
-Date received
+4. **Update configuration**
+   - Set your Google Sheet ID in both workflows
+   - Configure Monday.com board ID
+   - Adjust column mappings as needed
 
+## 📊 Workflow Details
 
-Prepares clean data for AI processing
+### 1. Product Data Pipeline
 
-Step 3: AI Processing (OpenAI Chat Model + AI Agent)
+**Purpose:** Fetches product data from API and stores it in Google Sheets
 
-Uses GPT-4.1-mini to intelligently parse the email
-Structured with a detailed prompt that instructs the AI to extract:
+**Flow:**
+1. Manual trigger initiates the workflow
+2. HTTP Request fetches products from DummyJSON API
+3. JavaScript code transforms data (ID, Name, Price, Category)
+4. Google Sheets node appends all products to spreadsheet
 
-Product ID
-Product name
-Quantity ordered
-Customer name
-Delivery address
-Phone number
-Requested delivery date
-
-
-The AI returns a JSON object with all extracted information
-Returns null for any fields not found in the email
-
-Step 4: JSON Parsing (JavaScript Code)
-
-Takes the AI's text output and converts it to a proper JSON object
-Removes markdown code blocks that the AI might include
-Converts product_id to a number for matching with Google Sheets
-Adds an "ID" field to enable merging with product data
-Includes error handling for cases where AI output isn't valid JSON
-
-Step 5: Product Lookup (Google Sheets)
+**API Endpoint:** `https://dummyjson.com/products`
 
-Searches the Google Sheet for the product using the extracted product_id
-Filters the sheet where ID column matches the order's product_id
-Retrieves complete product information (Name, Price, Category)
-This is the critical integration point mentioned in the requirements
+### 2. Email to Monday.com Task
 
-Step 6: Data Merging
+**Purpose:** Processes customer order emails and creates Monday.com tasks
 
-Combines the AI-extracted order data with the product information from Google Sheets
-Uses a Merge node to join both data streams by position
-Ensures all information is available for the final task creation
+**Flow:**
+1. IMAP trigger monitors Gmail inbox for new emails
+2. JavaScript extracts email subject, body, sender, and date
+3. OpenAI AI Agent parses email and structures order data
+4. JavaScript converts AI output to JSON and adds ID field
+5. Google Sheets lookup retrieves product details by ID
+6. Merge node combines order data with product information
+7. Edit Fields node prepares data for Monday.com
+8. Monday.com node creates task with complete order details
 
-Step 7: Field Preparation (Edit Fields)
+**AI Extraction Fields:**
+- Product ID
+- Product Name
+- Quantity
+- Customer Name
+- Delivery Address
+- Phone Number
+- Delivery Date
 
-Prepares all data in the exact format Monday.com expects
-Maps information to variables:
+## 🧪 Testing
 
-Board ID (hardcoded to my specific board)
-Item name (Product Name + ID)
-Order details (quantity, delivery date)
-Customer information (name, address, phone)
-Product details (ID, name, category, price)
+### Test Email Format
 
-
-
-Step 8: Monday.com Task Creation
-
-Creates a new item in the specified Monday.com board
-Populates all custom columns with the prepared data
-Uses column IDs to match the board's structure
-The task includes both order information and product details
-
-Product Integration
-How Product Lookup Works:
-When an email mentions "Product ID 42" or similar, the workflow:
-
-Extracts "42" from the email using AI
-Converts it to a number
-Searches the Google Sheet where ID = 42
-Retrieves that product's name, price, and category
-Includes all this information in the Monday.com task
-
-This ensures that even if the email only mentions the product ID, the task will show the complete product details from our database.
-
-🐛 Bugs and Issues Found
-Issue #1: Pagination Not Fully Implemented
-Problem: The Product Data Pipeline only fetches the first page of products.
-Impact: If the API has more than 30 products (the default limit), we won't capture everything.
-Solution Needed: Add a loop to fetch all pages before storing data.
-Issue #2: Hardcoded Values in Email Workflow
-Problem: Some values in the "Edit Fields" node are hardcoded (like quantity "3", date "October 10, 2025", etc.) instead of being dynamically pulled from the AI extraction.
-Impact: The workflow works for the test email but won't adapt to different customer requests.
-Solution Needed: Replace hardcoded values with dynamic references like {{ $json.quantity }}, {{ $json.delivery_date }}, etc.
-Issue #3: AI Model Version
-Problem: The OpenAI Chat Model uses "gpt-4.1-mini" which might not be the correct model identifier.
-Impact: Could cause API errors if OpenAI doesn't recognize this model name.
-Solution Needed: Verify the correct model name (likely "gpt-4-mini" or "gpt-3.5-turbo").
-Issue #4: Error Handling
-Problem: Limited error handling throughout the workflows.
-What Could Go Wrong:
-
-API might be down or return errors
-AI might fail to extract information correctly
-Product ID might not exist in Google Sheets
-Monday.com API might fail
-Solution Needed: Add error handling nodes to catch failures and send notifications or retry operations.
-
-Issue #5: Product Name Matching
-Problem: The workflow only looks up products by ID, not by name.
-Impact: If a customer says "I want the Red T-Shirt" without mentioning the ID, the lookup would fail.
-Solution Needed: Add fuzzy matching logic to search by product name as a fallback.
-
-🛡️ Error Handling Strategy
-Current Approach
-My error handling is basic but functional:
-
-JavaScript Code Nodes: Include try-catch blocks to handle JSON parsing errors
-Console Logging: Log errors to help with debugging
-Always Output Data: Some nodes are set to always output data even on failure
-
-Recommended Improvements
-For API Failures:
-
-Add a "Check Response Status" condition
-Retry failed requests with exponential backoff
-Send alert notifications if API is consistently down
-
-For Missing Product References:
-
-Add a condition to check if Google Sheets returned any results
-Create a fallback task that flags "Product Not Found" for manual review
-Log missing product IDs for database updates
-
-For AI Errors:
-
-Validate that AI output contains required fields
-Add a fallback to manual processing if AI confidence is low
-Include example emails in the AI prompt for better accuracy
-
-For Monday.com Integration:
-
-Verify board and column IDs exist before creating items
-Handle duplicate item prevention
-Retry failed API calls
-
-
-🎯 Assumptions Made
-
-Single API Endpoint: I assumed all products would be available from one API endpoint without authentication requirements.
-Email Format: I assumed customer emails would follow a reasonably consistent format with identifiable fields.
-Product IDs: I assumed product IDs in emails would be numeric and match exactly with Google Sheets data.
-Google Sheets Structure: I assumed a simple four-column structure would be sufficient for product data storage.
-Monday.com Board: I assumed a specific board structure with predefined custom columns for order information.
-One Product Per Order: The current implementation handles one product per email. Multiple products in a single order would require additional logic.
-AI Accuracy: I assumed OpenAI would reliably extract information from well-structured emails.
-Network Reliability: I assumed stable internet connectivity for all API calls.
-
-
-🚀 Testing Results
-Test Email Used
+```
 Subject: Urgent Order Request – Red T-Shirt (Product ID 42)
 
 Body:
@@ -252,52 +145,114 @@ Can you confirm once this is scheduled?
 
 Best regards,
 John.
-Workflow Execution
-✅ Product Data Pipeline: Successfully fetched and stored products
-✅ Email Trigger: Detected the test email
-✅ AI Extraction: Correctly identified product ID, customer info, and requirements
-✅ Product Lookup: Found Product ID 42 in Google Sheets
-✅ Task Creation: Created Monday.com item with all details
-What Worked Well
+```
 
-AI extraction was surprisingly accurate
-Google Sheets integration was smooth
-Monday.com task included all relevant information
-The workflow executed end-to-end without manual intervention
+### Expected Results
 
-What Needs Improvement
+✅ Email detected and parsed  
+✅ Product ID 42 extracted by AI  
+✅ Product details retrieved from Google Sheets  
+✅ Monday.com task created with all information  
 
-Dynamic value extraction instead of hardcoded fields
-Better error messages
-More robust pagination handling
-Support for multiple products per order
+## 🐛 Known Issues
 
+### 1. Pagination Not Fully Implemented
+**Issue:** Product Data Pipeline only fetches the first page  
+**Impact:** Limited to ~30 products  
+**Fix:** Add loop node to fetch all pages before processing
 
-📁 Project Files
-All project files are organized in the Google Drive folder:
+### 2. Hardcoded Values
+**Issue:** Some values in Edit Fields are hardcoded (quantity, date)  
+**Impact:** Works for test email but not dynamic  
+**Fix:** Replace with dynamic references from AI extraction
 
-Product Data Pipeline.json - n8n workflow export for product fetching
-Email to Monday.com Task.json - n8n workflow export for email processing
-README.md - This documentation file
-Video Walkthrough.mp4 - Demonstration video (link provided separately)
+### 3. AI Model Version
+**Issue:** Uses "gpt-4.1-mini" which may not be valid  
+**Impact:** Potential API errors  
+**Fix:** Update to correct model name (e.g., "gpt-4-mini")
 
+### 4. Limited Error Handling
+**Issue:** No retry logic or failure notifications  
+**Impact:** Silent failures possible  
+**Fix:** Add error handling nodes and alerts
 
-🔗 Resources Used
+### 5. Product Name Matching
+**Issue:** Only searches by ID, not product name  
+**Impact:** Fails if customer doesn't mention ID  
+**Fix:** Add fuzzy matching for product names
 
-API: DummyJSON Products API
-Storage: Google Sheets
-AI: OpenAI GPT-4.1-mini
-Task Management: Monday.com
-Email: Gmail (IMAP)
-Automation Platform: n8n
+## 🛡️ Error Handling Strategy
 
+### Current Implementation
+- Try-catch blocks in JavaScript nodes
+- Console logging for debugging
+- "Always Output Data" enabled on critical nodes
 
-💭 Final Thoughts
-This project was a great learning experience in building practical automation workflows. While there are areas for improvement (especially around pagination and error handling), the core functionality works as intended. The integration between AI extraction, database lookup, and task creation demonstrates how modern automation can significantly reduce manual work in order processing.
-The most challenging part was ensuring data flowed correctly between nodes, especially when merging product information with order details. The most rewarding part was seeing the AI accurately extract structured data from unstructured email text.
-Thank you for reviewing my submission. I'm excited about the possibility of working with Get Levrg Bangladesh Ltd and would welcome any feedback on how to improve this automation further!
+### Recommended Improvements
+- **API Failures:** Add retry logic with exponential backoff
+- **Missing Products:** Create fallback tasks for manual review
+- **AI Errors:** Validate output and add confidence checks
+- **Monday.com:** Verify board/column IDs before creating items
 
-Contact Information:
-Shihab Shahriar Aion
-aionshihabshahriar@gmail.com
-+8801959040057
+## 📝 Configuration
+
+### Google Sheets Structure
+| ID | Name | Price | Category |
+|----|------|-------|----------|
+| 1  | Product Name | 99.99 | electronics |
+
+### Monday.com Columns
+- `date4` - Delivery Date
+- `text_mkwqw2rn` - Order ID
+- `text_mkwqqf5h` - Product ID
+- `text_mkwqd170` - Product Name
+- `text_mkwqzkem` - Product Category
+- `text_mkwqr970` - Product Price
+- `text_mkwq3bc5` - Quantity
+- `text_mkwqb5a9` - Customer Address
+- `text_mkwq2ty0` - Phone Number
+
+## 🔧 Technologies Used
+
+- **n8n** - Workflow automation platform
+- **OpenAI GPT-4** - AI for email parsing
+- **Google Sheets** - Product data storage
+- **Monday.com** - Task management
+- **Gmail (IMAP)** - Email monitoring
+- **DummyJSON API** - Product data source (for demo)
+
+## 💡 Key Learnings
+
+- **Data Flow Management:** Ensuring proper data structure between nodes
+- **AI Integration:** Structuring prompts for reliable JSON output
+- **API Pagination:** Understanding importance of complete data collection
+- **Error Resilience:** Need for comprehensive error handling in production
+
+## 🎯 Future Improvements
+
+- [ ] Implement complete pagination handling
+- [ ] Add dynamic value extraction for all fields
+- [ ] Support multiple products per order
+- [ ] Add webhook triggers for real-time processing
+- [ ] Implement advanced error notifications (Slack/Email)
+- [ ] Add product name fuzzy matching
+- [ ] Create dashboard for order analytics
+- [ ] Add order status tracking
+
+## 👤 Author
+
+**Shihab Shahriar Aion**
+
+- GitHub: (https://github.com/AION-2000)
+- LinkedIn: (https://www.linkedin.com/in/shihab-shahriar-aion-a1i2o3n4/)
+
+## 🙏 Acknowledgments
+
+- n8n community for excellent documentation
+- OpenAI for powerful AI capabilities
+
+---
+
+⭐ If you found this project helpful, please give it a star!
+
+📧 For questions or suggestions, feel free to open an issue.
