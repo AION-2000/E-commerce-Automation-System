@@ -1,0 +1,366 @@
+{
+  "name": "Email to Monday.com Task",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        -32
+      ],
+      "id": "c6e470d9-a5b2-43cc-a102-1a85c98b7d0d",
+      "name": "Email Trigger (IMAP)",
+      "credentials": {
+        "imap": {
+          "id": "CEreR13fxN1KZmnt",
+          "name": "IMAP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract email data\nconst emailData = $input.all()[0].json;\n\n// Extract key information\nconst subject = emailData.subject || '';\n\n// Extract body from the correct fields (prioritize plain text)\nconst body = emailData.textPlain || emailData.textHtml || '';\n\n// Return the extracted data for processing\nreturn [{\n  json: {\n    subject: subject,\n    body: body,\n    from: emailData.from,\n    date: emailData.date\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -32
+      ],
+      "id": "bc82452f-25d7-4560-92bc-c8ce6aed9298",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        408,
+        192
+      ],
+      "id": "caf837dc-38cf-47d4-a6f1-0e5fbc3e471b",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "5GfvWjMBdh74hBVH",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an intelligent order processing assistant. Your task is to extract key information from a customer's email and structure it into a JSON object.\n\nThe email body will be provided to you. Extract the following details if present:\n- product_id: The numerical ID of the product.\n- product_name: The name of the product.\n- quantity: The number of units ordered.\n- customer_name: The full name of the customer.\n- customer_address: The full delivery address.\n- customer_phone: The customer's phone number.\n- delivery_date: The requested delivery date.\n\nIf a piece of information is not found in the email, use the value `null` for that key.\n\nRespond with ONLY the JSON object. Do not add any other text, explanations, or greetings.\n\nEmail Body:\n{{ $json.body }}",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        -32
+      ],
+      "id": "cfdeeefb-acbd-4a8b-b6a6-7b94fe80ff68",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the full input object from the previous node\nconst inputData = $input.first().json;\nlet textString = '';\n\n// --- Try to find the AI's response text in different possible locations ---\nif (inputData.output) {\n  textString = inputData.output;\n} else if (inputData.text) {\n  textString = inputData.text;\n} else if (inputData.response && inputData.response.generations && inputData.response.generations[0] && inputData.response.generations[0][0]) {\n  textString = inputData.response.generations[0][0].text;\n}\n\n// --- If we found the text, process it ---\nif (textString) {\n  // Remove markdown code blocks\n  const jsonString = textString.replace(/```json\\n|\\n```/g, '').trim();\n  \n  try {\n    // Parse the clean string into a real JSON object\n    const orderData = JSON.parse(jsonString);\n    \n    // ADD THIS: Convert product_id to number and add ID field to match Google Sheets\n    const productId = parseInt(orderData.product_id, 10);\n    \n    // Create output with ID field for merging\n    const processedOrder = {\n      ...orderData,           // Keep all original fields\n      ID: productId          // Add ID field to match Google Sheets column name\n    };\n    \n    console.log(\"Processed order data:\", processedOrder);\n    \n    // Return the processed object\n    return [{ json: processedOrder }];\n    \n  } catch (e) {\n    console.error(\"Failed to parse JSON from AI output. Raw text:\", textString);\n    console.error(\"Error:\", e.message);\n    throw new Error(\"AI output was not valid JSON: \" + e.message);\n  }\n} else {\n  console.error(\"Could not find AI output text in the input data:\", inputData);\n  throw new Error(\"Could not find AI output text. The node structure may have changed.\");\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -32
+      ],
+      "id": "46278c8a-987f-4599-9cc5-9b24a23838a9",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1136,
+        -32
+      ],
+      "id": "fc7e4c26-1e80-4f7e-99ea-3eb96441bac7",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b6d37d96-51db-46dd-b191-b639abdb2091",
+              "name": "boardId",
+              "value": 5013323335,
+              "type": "string"
+            },
+            {
+              "id": "f73bc98f-07f6-4d7f-bec9-d72c2ad93c7e",
+              "name": "itemName",
+              "value": "={{ $(\"GoogleSheetData\").first().json.Name }} - {{ $(\"GoogleSheetData\").first().json.ID }}",
+              "type": "string"
+            },
+            {
+              "id": "bad21aa9-616d-4a46-91e7-108e3597b930",
+              "name": "date4",
+              "value": "=October 10, 2025",
+              "type": "string"
+            },
+            {
+              "id": "790f0951-4a18-4e16-bb22-20319b70c4bd",
+              "name": "orderId",
+              "value": "={{ $(\"GoogleSheetData\").first().json.ID }}",
+              "type": "string"
+            },
+            {
+              "id": "a44fd22e-1deb-4506-bc7f-fba5da2eeadc",
+              "name": "productId",
+              "value": "={{ $(\"GoogleSheetData\").first().json.ID }}",
+              "type": "string"
+            },
+            {
+              "id": "592f4da9-f044-474a-a7b8-021c3ee05640",
+              "name": "productName",
+              "value": "={{ $(\"GoogleSheetData\").first().json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "c040a886-9f61-4996-87ec-5c496667fafb",
+              "name": "productCategory",
+              "value": "={{ $(\"GoogleSheetData\").first().json.Category }}",
+              "type": "string"
+            },
+            {
+              "id": "198e67c8-07b4-4294-b364-8421dfb426a0",
+              "name": "productPrice",
+              "value": "={{ $(\"GoogleSheetData\").first().json.Price }}",
+              "type": "string"
+            },
+            {
+              "id": "95473a00-a6ba-43fe-b4b0-4fdbb83963dc",
+              "name": "quantity",
+              "value": "=3",
+              "type": "string"
+            },
+            {
+              "id": "aa95ff5d-8b14-4872-ad79-4b45e68390ec",
+              "name": "customerAddress",
+              "value": "=45 Park Street, Dhaka",
+              "type": "string"
+            },
+            {
+              "id": "cdfe7c36-0c05-4816-a915-c58b0ef82bb9",
+              "name": "phoneNumber",
+              "value": "=+880123456789",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        -32
+      ],
+      "id": "cc1741db-7e5b-4156-96cd-1e96e84fbe3c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "129-qZZHVn5G8l6R6ZwSkPB5WIdBW2ZM3AksRQiP0uY0",
+          "mode": "list",
+          "cachedResultName": "Product Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/129-qZZHVn5G8l6R6ZwSkPB5WIdBW2ZM3AksRQiP0uY0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/129-qZZHVn5G8l6R6ZwSkPB5WIdBW2ZM3AksRQiP0uY0/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=ID",
+              "lookupValue": "={{ $json.product_id.toString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        40
+      ],
+      "id": "211202c7-71b0-404f-9f22-b3bf641a97b5",
+      "name": "GoogleSheetData",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3ruFtxojYfl45SE5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "boardItem",
+        "boardId": "5013323335",
+        "groupId": "topics",
+        "name": "={{ $(\"GoogleSheetData\").first().json.Name }} - {{ $(\"GoogleSheetData\").first().json.ID }}",
+        "additionalFields": {
+          "columnValues": "={\n  \"date4\": \"2025-10-10\",\n  \"text_mkwqw2rn\": \"{{ $json.orderId }}\",\n  \"text_mkwqqf5h\": \"{{ $json.productId }}\",\n  \"text_mkwqd170\": \"{{ $json.productName }}\",\n  \"text_mkwqzkem\": \"{{ $json.productCategory }}\",\n  \"text_mkwqr970\": \"{{ $json.productPrice }}\",\n  \"text_mkwq3bc5\": \"{{ $json.quantity }}\",\n  \"text_mkwqb5a9\": \"{{ $json.customerAddress }}\",\n  \"text_mkwq2ty0\": \"{{ $json.phoneNumber }}\"\n}"
+        }
+      },
+      "type": "n8n-nodes-base.mondayCom",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        -32
+      ],
+      "id": "e6ba676a-3cde-43ad-b51d-6ff7d7303778",
+      "name": "Create an item in a board's group1",
+      "executeOnce": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "mondayComApi": {
+          "id": "K8jQcP3Avm9u4lNU",
+          "name": "Monday.com account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GoogleSheetData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Create an item in a board's group1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GoogleSheetData": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "66f83a22-2475-4702-b8b5-16565fd13e68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "59299b0258fffdbebcd1ec574befbcfc003b960fa17fb4385cff6dea5e5cfd8f"
+  },
+  "id": "1nTeh9kad2jIRNNr",
+  "tags": []
+}
