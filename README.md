@@ -1,6 +1,6 @@
 # E-commerce Automation System
 
-> End-to-end n8n automation for e-commerce order processing with AI-powered email parsing, product lookup, and Monday.com integration
+> An n8n workflow prototype that streamlines e-commerce operations by parsing order emails, looking up product data and creating follow-up tasks in Monday.com.
 
 n8n:
 <img width="1024" height="273" alt="image" src="https://github.com/user-attachments/assets/16c3cc31-5326-498e-924e-084d78226e14" />
